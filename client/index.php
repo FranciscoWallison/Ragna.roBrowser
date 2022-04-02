@@ -48,7 +48,7 @@
 	/**
 	 * DIRECT ACCESS
 	 */
-	if (empty($_SERVER['REDIRECT_STATUS']) || $_SERVER['REDIRECT_STATUS'] != 404 || empty($_SERVER['REQUEST_URI'])) {
+	if (empty($_SERVER['REDIRECT_STATUS']) || empty($_SERVER['REQUEST_URI'])) {
 		Debug::write('Direct access, no file requested ! You have to request a file (from the url), for example: <a href="data/clientinfo.xml">data/clientinfo.xml</a>', 'error');
 		Debug::output();
 	}
@@ -60,10 +60,10 @@
 	$directory = basename(dirname(__FILE__));
 
 	// Check Allowed directory
-	if (!preg_match( '/\/('. $directory . '\/)?(data|BGM)\//', $path)) {
-		Debug::write('Forbidden directory, you can just access files located in data and BGM folder.', 'error');
-		Debug::output();
-	}
+	// if (!preg_match( '/\/('. $directory . '\/)?(data|BGM)\//', $path)) {
+	// 	Debug::write('Forbidden directory, you can just access files located in data and BGM folder.', 'error');
+	// 	Debug::output();
+	// }
 
 	// Get file
 	$path = preg_replace('/(.*('. $directory . '\/)?)(data|BGM\/.*)/', '$3', $path );

@@ -102,7 +102,7 @@ final class Client
 		Debug::write('Searching file ' . $path . '...', 'title');
 
 		// Read data first
-		if (file_exists($local_pathEncoded) && !is_dir($local_pathEncoded) && is_readable($local_pathEncoded)) {
+		if (file_exists($local_pathEncoded) && is_readable($local_pathEncoded)) {
 			Debug::write('File found at ' . $local_path, 'success');
 
 			// Store file
