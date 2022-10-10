@@ -9,6 +9,9 @@
 .ItemInfo .description .description-inner { width: 150px }
 .ItemInfo .extend { position:absolute; right:4px; bottom:3px; width:13px; height:13px; border:none; background-repeat:no-repeat; background-color:transparent; }
 
+.ItemInfo .event_view_show { position: absolute; }
+.ItemInfo .event_view_show .view_show { position:absolute; width:42px; height:20px; background-repeat:no-repeat; background-color:transparent; border:none; top:100px; left:25px; }
+
 .ItemInfo .cardlist { border-radius:5px; background:white; padding:2px; margin-top:3px; }
 .ItemInfo .cardlist .border { border:1px solid #c1c6c2; padding-top:2px; padding-left:5px; border-radius:5px; }
 .ItemInfo .cardlist .item { position: relative; display:inline-block; }

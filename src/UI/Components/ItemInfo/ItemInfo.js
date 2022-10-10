@@ -33,6 +33,7 @@ define(function(require)
 	var cssText            = require('text!./ItemInfo.css');
 	var Network       	   = require('Network/NetworkManager');
 	var PACKET        	   = require('Network/PacketStructure');
+	var ChatBox            = require('UI/Components/ChatBox/ChatBox');
 	var getModule     = require;
 
 
@@ -115,6 +116,21 @@ define(function(require)
 				return false;
 			})
 			.click(this.remove.bind(this));
+
+		this.ui.find('.view_show').click(function(){
+
+		let inforItem = `Nome: ${this.item.identifiedDisplayName}`;
+		
+		console.log('this.item_view_show', this.item)
+
+			ChatBox.addText(
+
+				inforItem
+			
+			, ChatBox.TYPE.ADMIN);
+		}.bind(this));
+
+			
 
 		// Ask to see card.
 		this.ui.find('.view').click(function(){
