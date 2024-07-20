@@ -19,13 +19,13 @@ class ROBrowser {
     };
 
     static APP = {
-        ONLINE: 1,
-        MAPVIEWER: 2,
-        GRFVIEWER: 3,
-        MODELVIEWER: 4,
-        STRVIEWER: 5,
-        GRANNYMODELVIEWER: 6,
-        EFFECTVIEWER: 7
+        ONLINE: 'Online',
+        MAPVIEWER: 'MapViewer',
+        GRFVIEWER: 'GrfViewer',
+        MODELVIEWER: 'ModelViewer',
+        STRVIEWER: 'StrViewer',
+        GRANNYMODELVIEWER: 'GrannyModelViewer',
+        EFFECTVIEWER: 'EffectViewer'
     };
 
     width = 0;
@@ -68,10 +68,10 @@ class ROBrowser {
 
     baseUrl = (function() {
         const script = document.getElementsByTagName('script');
-        return script[script.length - 1].src
-            .replace(/\/[^\/]+\.js.*/, '/api.js')
-            .replace(/\/src\/.*/, '/api.js');
-    })().replace('.js', '.html');
+        let src = script[script.length - 1].src;
+        src = src.replace(/\/[^\/]+\.js.*/, '/api.html');
+        return src;
+    })();
 
     async start() {
         switch (this.type) {
@@ -103,8 +103,6 @@ class ROBrowser {
                 this.height = this.height || '100%';
 
                 const frame = document.createElement('iframe');
-				
-				const base = `${this.baseUrl}?${Math.random()}${location.hash}`
                 frame.src = `${this.baseUrl}?${Math.random()}${location.hash}`;
                 frame.width = this.width;
                 frame.height = this.height;
@@ -146,34 +144,12 @@ class ROBrowser {
     }
 
     async initializeApplication() {
-        switch (this.application) {
-            case ROBrowser.APP.ONLINE:
-                this.application = 'Online';
-                break;
-            case ROBrowser.APP.MAPVIEWER:
-                this.application = 'MapViewer';
-                break;
-            case ROBrowser.APP.GRFVIEWER:
-                this.application = 'GrfViewer';
-                break;
-            case ROBrowser.APP.MODELVIEWER:
-                this.application = 'ModelViewer';
-                break;
-            case ROBrowser.APP.STRVIEWER:
-                this.application = 'StrViewer';
-                break;
-            case ROBrowser.APP.GRANNYMODELVIEWER:
-                this.application = 'GrannyModelViewer';
-                break;
-            case ROBrowser.APP.EFFECTVIEWER:
-                this.application = 'EffectViewer';
-                break;
-        }
+        const applicationName = this.application;
+        this.application = applicationName;
 
         const _this = this;
 
         function onMessage(event) {
-
             if (_this.baseUrl.indexOf(event.origin) === 0) {
                 clearInterval(_this._Interval);
                 window.removeEventListener('message', onMessage, false);
