@@ -103,11 +103,8 @@ class ROBrowser {
                 this.height = this.height || '100%';
 
                 const frame = document.createElement('iframe');
-				debugger;
+				
 				const base = `${this.baseUrl}?${Math.random()}${location.hash}`
-				console.log('====================================');
-				console.log(base);
-				console.log('====================================');
                 frame.src = `${this.baseUrl}?${Math.random()}${location.hash}`;
                 frame.width = this.width;
                 frame.height = this.height;
@@ -176,9 +173,7 @@ class ROBrowser {
         const _this = this;
 
         function onMessage(event) {
-			console.log('============onMessage===============');
-			console.log(_this.baseUrl.indexOf(event.origin));
-			console.log('====================================');
+
             if (_this.baseUrl.indexOf(event.origin) === 0) {
                 clearInterval(_this._Interval);
                 window.removeEventListener('message', onMessage, false);
