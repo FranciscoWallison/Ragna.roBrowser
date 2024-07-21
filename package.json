@@ -3,10 +3,10 @@
 	"main": "index.html",
 	"version": "1.0.0",
 	"scripts": {
-		"start": "node server.js",
+		"build": "webpack --mode production",
+		"start": "webpack serve --mode development",
 		"serve": "live-server ./dist/Web",
 		"live": "live-server .  --no-browser --port=8000",
-		"build": "node ./tools/builder-web.js",
 		"build:online": "npm run build -- -O",
 		"build:mapviewer": "npm run build -- -V",
 		"build:grfviewer": "npm run build -- -G",
@@ -21,9 +21,17 @@
 	"author": "Vincent Thibault",
 	"license": "GNU GPL V3",
 	"devDependencies": {
+		"@babel/core": "^7.24.9",
+		"@babel/preset-env": "^7.24.8",
+		"babel-loader": "^9.1.3",
+		"copy-webpack-plugin": "^12.0.2",
+		"html-webpack-plugin": "^5.6.0",
 		"live-server": "^1.2.2",
 		"requirejs": "^2.3.6",
-		"terser": "^5.19.4"
+		"terser": "^5.19.4",
+		"webpack": "^5.93.0",
+		"webpack-cli": "^5.1.4",
+		"webpack-dev-server": "^5.0.4"
 	},
 	"dependencies": {
 		"express": "^4.17.1"

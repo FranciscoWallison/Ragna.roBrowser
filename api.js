@@ -1,209 +1,174 @@
-'use strict';
-
 class ROBrowser {
-    constructor(options) {
-        if (typeof options === 'object') {
-            Object.keys(options).forEach(key => {
-                if (ROBrowser.prototype.hasOwnProperty(key)) {
-                    this[key] = options[key];
-                } else {
-                    this[key] = options[key];
-                }
-            });
-        }
-    }
+	constructor(options = {}) {
+		this.config = Object.assign(
+			{
+				width: 0,
+				height: 0,
+				grfList: null,
+				servers: "data/clientinfo.xml",
+				remoteClient: "http://grf.robrowser.com/",
+				packetver: "auto",
+				charBlockSize: 0,
+				clientHash: null,
+				calculateHash: false,
+				hashFiles: [],
+				application: ROBrowser.APP.ONLINE,
+				type: ROBrowser.TYPE.POPUP,
+				target: null,
+				development: false,
+				loadLua: false,
+				onReady: null,
+				api: false,
+				socketProxy: null,
+				packetDump: false,
+				packetKeys: false,
+				saveFiles: true,
+				skipServerList: true,
+				skipIntro: false,
+				autoLogin: [],
+				enableCashShop: false,
+				enableBank: false,
+				enableMapName: false,
+				enableCheckAttendance: false,
+				clientVersionMode: "PacketVer",
+				version: "",
+				worldMapSettings: {},
+				forceUseAddress: false,
+				BGMFileExtension: ["mp3"],
+				plugins: {},
+				ThirdPersonCamera: false,
+				FirstPersonCamera: false,
+				CameraMaxZoomOut: 5,
+			},
+			options
+		);
+	}
 
-    static TYPE = {
-        POPUP: 1,
-        FRAME: 2
-    };
+	static TYPE = {
+		POPUP: 1,
+		FRAME: 2,
+	};
 
-    static APP = {
-        ONLINE: 'Online',
-        MAPVIEWER: 'MapViewer',
-        GRFVIEWER: 'GrfViewer',
-        MODELVIEWER: 'ModelViewer',
-        STRVIEWER: 'StrViewer',
-        GRANNYMODELVIEWER: 'GrannyModelViewer',
-        EFFECTVIEWER: 'EffectViewer'
-    };
+	static APP = {
+		ONLINE: 1,
+		MAPVIEWER: 2,
+		GRFVIEWER: 3,
+		MODELVIEWER: 4,
+		STRVIEWER: 5,
+		GRANNYMODELVIEWER: 6,
+		EFFECTVIEWER: 7,
+	};
 
-    width = 0;
-    height = 0;
-    grfList = null;
-    servers = 'data/clientinfo.xml';
-    remoteClient = 'http://grf.robrowser.com/';
-    packetver = 'auto';
-    charBlockSize = 0;
-    clientHash = null;
-    calculateHash = false;
-    hashFiles = [];
-    application = ROBrowser.APP.ONLINE;
-    type = ROBrowser.TYPE.FRAME;
-    target = null;
-    development = false;
-    loadLua = false;
-    onReady = null;
-    api = false;
-    socketProxy = null;
-    packetDump = false;
-    packetKeys = false;
-    saveFiles = true;
-    skipServerList = true;
-    skipIntro = false;
-    autoLogin = [];
-    enableCashShop = false;
-    enableBank = false;
-    enableMapName = false;
-    enableCheckAttendance = false;
-    clientVersionMode = "PacketVer";
-    version = '';
-    worldMapSettings = {};
-    forceUseAddress = false;
-    BGMFileExtension = ['mp3'];
-    plugins = {};
-    ThirdPersonCamera = false;
-    FirstPersonCamera = false;
-    CameraMaxZoomOut = 5;
+	start() {
+		if (this.type === ROBrowser.TYPE.POPUP) {
+			this.openPopup();
+		} else if (this.type === ROBrowser.TYPE.FRAME) {
+			this.insertFrame();
+		}
 
-    baseUrl = (function() {
-        const script = document.getElementsByTagName('script');
-        let src = script[script.length - 1].src;
-        src = src.replace(/\/[^\/]+\.js.*/, '/api.html');
-        return src;
-    })();
+		this.initializeROConfig(this.config);
+	}
 
-    async start() {
-        switch (this.type) {
-            case ROBrowser.TYPE.POPUP:
-                this.width = this.width || '800';
-                this.height = this.height || '600';
+	openPopup() {
+		this.config.width = this.config.width || "800";
+		this.config.height = this.config.height || "600";
 
-                this._APP = window.open(
-                    `${this.baseUrl}?${this.version}`,
-                    '_blank', [
-                        'directories=0',
-                        'fullscreen=0',
-                        `top=${((window.innerHeight || document.body.clientHeight) - this.height) / 2}`,
-                        `left=${((window.innerWidth || document.body.clientWidth) - this.width) / 2}`,
-                        `height=${this.height}`,
-                        `width=${this.width}`,
-                        'location=0',
-                        'menubar=0',
-                        'resizable=0',
-                        'scrollbars=0',
-                        'status=0',
-                        'toolbar=0'
-                    ].join(',')
-                );
-                await this.initializeApplication();
-                break;
-            case ROBrowser.TYPE.FRAME:
-                this.width = this.width || '100%';
-                this.height = this.height || '100%';
+		this._APP = window.open(
+			this.baseUrl + "?" + this.config.version,
+			"_blank",
+			[
+				"directories=0",
+				"fullscreen=0",
+				"top=" +
+					((window.innerHeight || document.body.clientHeight) -
+						this.config.height) /
+						2,
+				"left=" +
+					((window.innerWidth || document.body.clientWidth) -
+						this.config.width) /
+						2,
+				"height=" + this.config.height,
+				"width=" + this.config.width,
+				"location=0",
+				"menubar=0",
+				"resizable=0",
+				"scrollbars=0",
+				"status=0",
+				"toolbar=0",
+			].join(",")
+		);
+	}
 
-                const frame = document.createElement('iframe');
-                frame.src = `${this.baseUrl}?${Math.random()}${location.hash}`;
-                frame.width = this.width;
-                frame.height = this.height;
-                frame.style.border = 'none';
+	insertFrame() {
+		this.config.width = this.config.width || "100%";
+		this.config.height = this.config.height || "100%";
 
-                frame.setAttribute('allowfullscreen', 'true');
-                frame.setAttribute('webkitallowfullscreen', 'true');
-                frame.setAttribute('mozallowfullscreen', 'true');
+		const frame = document.createElement("iframe");
+		frame.src = this.baseUrl + "?" + Math.random() + location.hash; // fix bug on firefox
+		frame.width = this.config.width;
+		frame.height = this.config.height;
+		frame.style.border = "none";
 
-                if (this.target) {
-                    while (this.target.firstChild) {
-                        this.target.removeChild(this.target.firstChild);
-                    }
-                    this.target.appendChild(frame);
-                } else {
-                    console.error('Target element not found.');
-                    return;
-                }
+		frame.setAttribute("allowfullscreen", "true");
+		frame.setAttribute("webkitallowfullscreen", "true");
+		frame.setAttribute("mozallowfullscreen", "true");
 
-                await new Promise((resolve, reject) => {
-                    frame.onload = () => {
-                        this._APP = frame.contentWindow;
-                        if (!this._APP) {
-                            reject(new Error('Failed to initialize application container.'));
-                        } else {
-                            resolve();
-                        }
-                    };
-                });
+		if (this.config.target) {
+			while (this.config.target.firstChild) {
+				this.config.target.removeChild(this.config.target.firstChild);
+			}
+			this.config.target.appendChild(frame);
+		}
 
-                await this.initializeApplication();
-                break;
-        }
+		this._APP = frame.contentWindow;
+	}
 
-        if (!this._APP && this.type !== ROBrowser.TYPE.FRAME) {
-            console.error('Failed to initialize application container.');
-            return;
-        }
-    }
+	initializeROConfig(config) {
+		console.log("Initializing ROConfig:", config);
 
-    async initializeApplication() {
-        const applicationName = this.application;
-        this.application = applicationName;
+		// Get back application name
+		switch (config.application) {
+			case ROBrowser.APP.ONLINE:
+				config.application = "Online";
+				break;
 
-        const _this = this;
+			case ROBrowser.APP.MAPVIEWER:
+				config.application = "MapViewer";
+				break;
 
-        function onMessage(event) {
-            if (_this.baseUrl.indexOf(event.origin) === 0) {
-                clearInterval(_this._Interval);
-                window.removeEventListener('message', onMessage, false);
+			case ROBrowser.APP.GRFVIEWER:
+				config.application = "GrfViewer";
+				break;
 
-                if (_this.onReady) {
-                    _this.onReady();
-                }
-            }
-        }
+			case ROBrowser.APP.MODELVIEWER:
+				config.application = "ModelViewer";
+				break;
 
-        this._Interval = setInterval(this.waitForInitialization.bind(this), 100);
-        window.addEventListener('message', onMessage, false);
-    }
+			case ROBrowser.APP.STRVIEWER:
+				config.application = "StrViewer";
+				break;
 
-    waitForInitialization() {
-        if (this._APP) {
-            this._APP.postMessage({
-                application: this.application,
-                servers: this.servers,
-                grfList: this.grfList,
-                remoteClient: this.remoteClient,
-                packetver: this.packetver,
-                development: this.development,
-                loadLua: this.loadLua,
-                api: this.api,
-                socketProxy: this.socketProxy,
-                packetKeys: this.packetKeys,
-                saveFiles: this.saveFiles,
-                skipServerList: this.skipServerList,
-                skipIntro: this.skipIntro,
-                autoLogin: this.autoLogin,
-                enableCashShop: this.enableCashShop,
-                enableBank: this.enableBank,
-                enableMapName: this.enableMapName,
-                enableCheckAttendance: this.enableCheckAttendance,
-                version: this.version,
-                worldMapSettings: this.worldMapSettings,
-                clientHash: this.clientHash,
-                calculateHash: this.calculateHash,
-                hashFiles: this.hashFiles,
-                plugins: this.plugins,
-                charBlockSize: this.charBlockSize,
-                BGMFileExtension: this.BGMFileExtension,
-                ThirdPersonCamera: this.ThirdPersonCamera,
-                FirstPersonCamera: this.FirstPersonCamera,
-                clientVersionMode: this.clientVersionMode,
-                CameraMaxZoomOut: this.CameraMaxZoomOut,
-                packetDump: this.packetDump,
-                forceUseAddress: this.forceUseAddress
-            }, '*');
-        } else {
-            console.error('Application container is not initialized.');
-        }
-    }
+			case ROBrowser.APP.GRANNYMODELVIEWER:
+				config.application = "GrannyModelViewer";
+				break;
+
+			case ROBrowser.APP.EFFECTVIEWER:
+				config.application = "EffectViewer";
+				break;
+		}
+
+		if (config.development) {
+			const app = document.createElement("script");
+			app.type = "module";
+			app.src = "src/App/" + config.application + ".js?" + config.version;
+			document.getElementsByTagName("head")[0].appendChild(app);
+		} else {
+			const app = document.createElement("script");
+			app.type = "module";
+			app.src = config.application + ".js?" + config.version;
+			document.getElementsByTagName("head")[0].appendChild(app);
+		}
+	}
 }
 
 export default ROBrowser;
