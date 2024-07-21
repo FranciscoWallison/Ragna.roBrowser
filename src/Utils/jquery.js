@@ -5,82 +5,68 @@
  *
  * This file is part of ROBrowser, (http://www.robrowser.com/).
  *
- * @author Vincent Thibault
+ * @autor Vincent Thibault
  */
 
-define( ['jquery', 'DB/DBManager'], function( jQuery, DB )
-{
-	'use strict';
+import jQuery from '../Vendors/jquery-1.9.1.js';
+import DB from '../DB/DBManager.js';
 
+/**
+ * Overwrite text() to support npc code
+ *
+ * @param {string} value
+ */
+jQuery.fn.text = function(text) {
+  return jQuery.access(this, function(value) {
+    if (value === undefined) {
+      return jQuery.text(this);
+    }
 
-	/**
-	 * Overwrite text() to support npc code
-	 *
-	 * @param {string} value
-	 */
-	jQuery.fn.text = function( text ) {
-		return jQuery.access( this, function( value ) {
+    var reg, txt, result;
 
-			if (value === undefined) {
-				return jQuery.text( this );
-			}
+    // Escape, secure entry
+    value = String(value);
+    txt = jQuery.escape(value);
 
-			var reg, txt, result;
+    // Msg color ^000000
+    reg = /\^([a-fA-F0-9]{6})/;
+    while ((result = reg.exec(txt))) {
+      txt = txt.replace(result[0], '<span style="color:#' + result[1] + '">') + '</span>';
+    }
 
-			// Escape, secure entry
-			value = String(value);
-			txt   = jQuery.escape(value);
+    // Hiding hack ^nItemID^502
+    reg = /\^nItemID\^(\d+)/g;
+    while ((result = reg.exec(txt))) {
+      txt = txt.replace(result[0], DB.getItemInfo(result[1]).identifiedDisplayName);
+    }
 
-			// Msg color ^000000
-			reg = /\^([a-fA-F0-9]{6})/ ;
-			while ((result = reg.exec(txt))) {
-				txt = txt.replace( result[0], '<span style="color:#' + result[1] + '">') + '</span>';
-			}
+    // Line feed feature
+    txt = txt.replace(/\n/g, '<br/>');
 
-			// Hiding hack ^nItemID^502
-			reg = /\^nItemID\^(\d+)/g;
-			while ((result = reg.exec(txt))) {
-				txt = txt.replace( result[0], DB.getItemInfo(result[1]).identifiedDisplayName );
-			}
+    return jQuery(this).html(txt);
+  }, null, text, arguments.length);
+};
 
-			// Line feed feature
-			txt = txt.replace(/\n/g, '<br/>');
+/**
+ * Escape special chars from a string
+ *
+ * @param {string} text
+ * @returns {string} encoded string
+ */
+jQuery.escape = (function escapeClosure() {
+  const whitelist = ['font', 'i', 'b'];
 
-			return jQuery(this).html( txt );
+  return function escape(text) {
+    let filtered = jQuery('<div/>').html(text);
 
-		}, null, text, arguments.length );
-	};
+    // Filter from whitelist
+    filtered.find('*').each(function() {
+      if (whitelist.indexOf(this.tagName.toLowerCase()) === -1) {
+        jQuery(this).replaceWith(jQuery(this).html());
+      }
+    });
+    return filtered.html();
+  };
+})();
 
-
-	/**
-	 * Escape special chars from a string
-	 *
-	 * @param {string} text
-	 * @returns {string} encoded string
-	 */
-	jQuery.escape = (function escapeClosure(){
-		const whitelist = [
-			'font',
-			'i',
-			'b'
-		]
-
-		return function escape(text) {
-			let filtered = jQuery('<div/>').html(text);
-			
-			// Filter from whitelist
-			filtered.find('*').each(function(){
-				if (whitelist.indexOf(this.tagName.toLowerCase()) === -1) {
-					jQuery(this).replaceWith( jQuery(this).html() );
-				}
-			});
-			return filtered.html();
-		};
-	})();
-
-
-	/**
-	 * Export
-	 */
-	return jQuery.noConflict( true );
-});
+export default jQuery.noConflict(true);
