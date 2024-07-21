@@ -1,7 +1,7 @@
 import ROBrowser from './api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    const browserOptions = {
+  const browserOptions = {
     target: document.getElementById("robrowser"),
     remoteClient: "http://localhost:3338/",
     type: ROBrowser.TYPE.FRAME,
@@ -26,5 +26,3 @@ document.addEventListener('DOMContentLoaded', () => {
   const roBrowser = new ROBrowser(browserOptions);
   roBrowser.start();
 });
-
-window.addEventListener("load", initialize, false);

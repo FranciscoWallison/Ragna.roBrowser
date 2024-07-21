@@ -8,320 +8,285 @@
  * @author Vincent Thibault
  */
 
-define(['Core/Configs', 'Network/PacketLength'], function( Configs, PacketLength )
-{
-	"use strict";
+import Configs from '../Core/Configs.js';
+import PacketLength from './PacketLength.js';
 
-	/**
-	 * PACKETVER range
-	 * @var integer
-	 */
-	var _value = 0;
+let _value = 0;
+const _RENEWAL = Configs.get('renewal') || false;
 
-	/**
-	 * RENEWAL
-	 * @var boolean
-	 */
-	var _RENEWAL = Configs.get('renewal') || false;
+/**
+ * Loop over version to find the good one
+ * @return integer[] offset
+ */
+function getPacketVersion() {
+    const versions = this.versions;
+    const count = versions.length;
 
-	/**
-	 * Loop over version to find the good one
-	 * @return integer[] offset
-	 */
-	function getPacketVersion() {
-		var versions = this.versions;
-		var i, count = versions.length;
+    for (let i = 0; i < count - 1; ++i) {
+        if (_value < versions[i + 1][0]) {
+            return versions[i];
+        }
+    }
+    return versions[count - 1];
+}
 
-		for (i = 0; i < count-1; ++i) {
-			if (_value < versions[i+1][0]) {
-				return versions[i];
-			}
-		}
-		return versions[i];
-	}
+/**
+ * Get block size based on packetver
+ *
+ * @return {number} blocksize
+ */
+function calculateBlockSize() {
+    let blockSize = 106;
+    blockSize += 2; // hairColor;
+    blockSize += 4; // unknown value
 
+    blockSize += -(2 * 2) + (1 * 2) - 4;
 
-	/**
-	 * Get block size based on packetver
-	 *
-	 * @return {number} blocksize
-	 */
-	function calculateBlockSize() {
-		// Not dependent of PACKETVER
-		var blockSize = 106;
-		blockSize += 2; // hairColor;
-		blockSize += 4; // unknown value
+    if (_value >= 20061023) {
+        blockSize += 2;  // .bIsChangedCharName
+    }
 
-		// slot/haircolor (2 * (short)) -> (2 * (char))
-		// remove unknown 4 bytes
-		blockSize += -(2 * 2) + (1 * 2) - 4;
+    if (_value > 20081217) {
+        blockSize += -(2 * 2) + (2 * 4);
+    }
 
-		// Start check
-		if (_value >= 20061023) {
-			blockSize += 2;  // .bIsChangedCharName
-		}
+    if ((_value >= 20100720 && _value <= 20100727) || _value >= 20100803) {
+        blockSize += 12; // lastMap(14) - never found it...
+        blockSize += 4;  // lastMap(16)
+    }
 
-		// hp/maxhp (2 * (short)) -> (2 * (int))
-		if (_value > 20081217) {
-			blockSize += -(2 * 2) + (2 * 4);
-		}
+    if (_value >= 20100803) {
+        blockSize += 4;
+    }
 
-		if ((_value >= 20100720 && _value <= 20100727) || _value >= 20100803) {
-			blockSize += 12; // lastMap(14) - never found it...
-			blockSize += 4;  // lastMap(16)
-		}
+    if (_value >= 20110111) {
+        blockSize += 4;
+    }
 
-		// delete date
-		if (_value >= 20100803) {
-			blockSize += 4;
-		}
+    if (_value >= 20110928) {
+        blockSize += 4;
+    }
 
-		// robe
-		if (_value >= 20110111) {
-			blockSize += 4;
-		}
+    if (_value >= 20111025) {
+        blockSize += 4;
+    }
 
-		// slot addon
-		if (_value >= 20110928) {
-			blockSize += 4;
-		}
+    if (_value >= 20141016) {
+        blockSize++;
+    }
 
-		// rename addon
-		if (_value >= 20111025) {
-			blockSize += 4;
-		}
+    if (_value >= 20141022) {
+        blockSize += 2;
+    }
 
-		// Character sex
-		if (_value >= 20141016) {
-			blockSize++;
-		}
+    if (_value >= 20170830) {
+        blockSize += 4; // base_exp
+        blockSize += 4; // job_exp
+    }
 
-		// Body
-		if (_value >= 20141022) {
-			blockSize += 2;
-		}
+    if ((_RENEWAL && _value >= 20211103) || (_value >= 20220330)) {
+        blockSize += 4; // hp
+        blockSize += 4; // maxhp
+        blockSize += 6; // sp
+        blockSize += 6; // maxsp
+    }
 
-		if (_value >= 20170830) {
-			blockSize += 4; // base_exp
-			blockSize += 4; // job_exp
-		}
+    return blockSize;
+}
 
-		if ((_RENEWAL == true && _value >= 20211103) || (_value >= 20220330)) {
-			blockSize += 4; // hp
-			blockSize += 4; // maxhp
-			blockSize += 6; // sp
-			blockSize += 6; // maxsp
-		}
+/**
+ * Parse char list
+ *
+ * @param {BinaryReader} fp
+ * @param {number} end of the reader
+ */
+function parseCharList(fp, end) {
+    if (!end) {
+        end = fp.length;
+    }
 
-		return blockSize;
-	}
+    const out = [];
+    let blockSize = Configs.get('charBlockSize') || calculateBlockSize();
+    const length = end - fp.tell();
 
+    if (length <= 0) {
+        return out;
+    }
 
-	/**
-	 * Parse char list
-	 *
-	 * @param {BinaryReader} fp
-	 * @param {number} end of the reader
-	 */
-	function parseCharList(fp, end) {
-		if (!end) {
-			end = fp.length;
-		}
+    if (!blockSize || length % blockSize) {
+        console.error('CHARACTER_INFO size error!! blockSize : "' + blockSize + '", list length: ' + length + ', auto-detect...');
 
-		var i, count, out = [];
-		var blockSize = Configs.get('charBlockSize') || calculateBlockSize();
-		var length = end - fp.tell();
+        const knownSize = [106, 108, 112, 116, 124, 128, 132, 136, 140, 144, 145, 147, 155, 175];
+        const matches = [];
 
-		// Nothing to parse
-		if (length <= 0) {
-			return out;
-		}
+        for (let i = 0; i < knownSize.length; ++i) {
+            if ((length % knownSize[i]) === 0) {
+                matches.push(knownSize[i]);
+            }
+        }
 
-		// Invalid blocksize...
-		if (!blockSize || length % blockSize) {
-			console.error('CHARACTER_INFO size error!! blockSize : "'+ blockSize +'", list length: ' + length + ', auto-detect...');
+        if (matches.length !== 1) {
+            require('UI/UIManager').showErrorBox('CHARACTER_INFO size error!! blockSize : "' + blockSize + '", list length: ' + length + ', auto-detect...');
+            return out;
+        }
 
-			var knownSize = [106, 108, 112, 116, 124, 128, 132, 136, 140, 144, 145, 147, 155, 175];
-			var matches = [];
+        blockSize = matches[0];
+    }
 
-			for (i = 0, count = knownSize.length; i < count; ++i) {
-				if ((length % knownSize[i]) === 0) {
-					matches.push(knownSize[i]);
-				}
-			}
+    for (let i = 0, count = length / blockSize; i < count; ++i) {
+        out[i] = {};
+        out[i].GID = fp.readULong();
+        out[i].exp = fp.readLong();
+        if (_value >= 20170830 || blockSize >= 155) {
+            fp.readLong();
+        }
+        out[i].money = fp.readLong();
+        out[i].jobexp = fp.readLong();
+        if (_value >= 20170830 || blockSize >= 155) {
+            fp.readLong();
+        }
+        out[i].joblevel = fp.readLong();
+        out[i].bodyState = fp.readLong();
+        out[i].healthState = fp.readLong();
+        out[i].effectState = fp.readLong();
+        out[i].virtue = fp.readLong();
+        out[i].honor = fp.readLong();
+        out[i].jobpoint = fp.readShort();
 
-			// No result, or multiple ones...
-			if (matches.length !== 1) {
-				require('UI/UIManager').showErrorBox('CHARACTER_INFO size error!! blockSize : "'+ blockSize +'", list length: ' + length + ', auto-detect...');
-				return out;
-			}
+        if (blockSize < 112) {
+            out[i].hp = fp.readShort();
+            out[i].maxhp = fp.readShort();
+        } else {
+            out[i].hp = fp.readLong();
+            if ((_RENEWAL && _value >= 20211103) || _value >= 20220330 || blockSize >= 175) {
+                fp.readLong();
+            }
+            out[i].maxhp = fp.readLong();
+            if ((_RENEWAL && _value >= 20211103) || _value >= 20220330 || blockSize >= 175) {
+                fp.readLong();
+            }
+        }
 
-			blockSize = matches[0];
-		}
+        if (_value < 20201007 || blockSize < 175) {
+            out[i].sp = fp.readShort();
+            out[i].maxsp = fp.readShort();
+        } else {
+            out[i].sp = fp.readLong();
+            if ((_RENEWAL && _value >= 20211103) || _value >= 20220330 || blockSize >= 175) {
+                fp.readLong();
+            }
+            out[i].maxsp = fp.readLong();
+            if ((_RENEWAL && _value >= 20211103) || _value >= 20220330 || blockSize >= 175) {
+                fp.readLong();
+            }
+        }
+        out[i].speed = fp.readShort();
+        out[i].job = fp.readShort();
+        out[i].head = fp.readShort();
 
-		for (i = 0, count = length / blockSize; i < count; ++i) {
-			out[i] = {};
-			out[i].GID = fp.readULong();
-			out[i].exp = fp.readLong();
-			if (_value >= 20170830 || blockSize >= 155) {
-				fp.readLong();
-			}
-			out[i].money = fp.readLong();
-			out[i].jobexp = fp.readLong();
-			if (_value >= 20170830 || blockSize >= 155) {
-				fp.readLong();
-			}
-			out[i].joblevel = fp.readLong();
-			out[i].bodyState = fp.readLong();
-			out[i].healthState = fp.readLong();
-			out[i].effectState = fp.readLong();
-			out[i].virtue = fp.readLong();
-			out[i].honor = fp.readLong();
-			out[i].jobpoint = fp.readShort();
+        if (blockSize >= 147) {
+            out[i].body = fp.readShort();
+        }
 
-			if (blockSize < 112) {
-				out[i].hp = fp.readShort();
-				out[i].maxhp = fp.readShort();
-			} else {
-				out[i].hp = fp.readLong();
-				if ((_RENEWAL == true && _value >= 20211103) || _value >= 20220330 || blockSize >= 175) {
-					fp.readLong();
-				}
-				out[i].maxhp = fp.readLong();
-				if ((_RENEWAL == true && _value >= 20211103) || _value >= 20220330 || blockSize >= 175) {
-					fp.readLong();
-				}
-			}
+        out[i].weapon = fp.readShort();
+        out[i].level = fp.readShort();
+        out[i].sppoint = fp.readShort();
+        out[i].accessory = fp.readShort();
+        out[i].shield = fp.readShort();
+        out[i].accessory2 = fp.readShort();
+        out[i].accessory3 = fp.readShort();
+        out[i].headpalette = fp.readShort();
+        out[i].bodypalette = fp.readShort();
+        out[i].name = fp.readString(24);
+        out[i].Str = fp.readUChar();
+        out[i].Agi = fp.readUChar();
+        out[i].Vit = fp.readUChar();
+        out[i].Int = fp.readUChar();
+        out[i].Dex = fp.readUChar();
+        out[i].Luk = fp.readUChar();
 
-			if(_value < 20201007 || blockSize < 175) {
-				out[i].sp = fp.readShort();
-				out[i].maxsp = fp.readShort();
-			} else {
-				out[i].sp = fp.readLong();
-				if ((_RENEWAL == true && _value >= 20211103) || _value >= 20220330 || blockSize >= 175) {
-					fp.readLong();
-				}
-				out[i].maxsp = fp.readLong();
-				if ((_RENEWAL == true && _value >= 20211103) || _value >= 20220330 || blockSize >= 175) {
-					fp.readLong();
-				}
-			}
-			out[i].speed = fp.readShort();
-			out[i].job = fp.readShort();
-			out[i].head = fp.readShort();
+        if (blockSize < 108) {
+            out[i].CharNum = fp.readUShort();
+        }
+        else if (blockSize < 124) {
+            out[i].CharNum = fp.readUShort();
+            out[i].haircolor = fp.readUShort();
+        }
+        else {
+            out[i].CharNum = fp.readUChar();
+            out[i].haircolor = fp.readUChar();
+        }
 
-			if (blockSize >= 147) {
-				out[i].body = fp.readShort();
-			}
+        if (blockSize === 116) {
+            fp.seek(0x04, SEEK_CUR); // unknown
+        }
 
-			out[i].weapon = fp.readShort();
-			out[i].level = fp.readShort();
-			out[i].sppoint = fp.readShort();
-			out[i].accessory = fp.readShort();
-			out[i].shield = fp.readShort();
-			out[i].accessory2 = fp.readShort();
-			out[i].accessory3 = fp.readShort();
-			out[i].headpalette = fp.readShort();
-			out[i].bodypalette = fp.readShort();
-			out[i].name = fp.readString(24);
-			out[i].Str = fp.readUChar();
-			out[i].Agi = fp.readUChar();
-			out[i].Vit = fp.readUChar();
-			out[i].Int = fp.readUChar();
-			out[i].Dex = fp.readUChar();
-			out[i].Luk = fp.readUChar();
+        if (blockSize >= 124) {
+            out[i].bIsChangedCharName = fp.readShort();
+            out[i].lastMap = fp.readBinaryString(blockSize === 124 ? 12 : 16);
+        }
 
-			if (blockSize < 108) {
-				out[i].CharNum = fp.readUShort();
-			}
-			else if (blockSize < 124) {
-				out[i].CharNum = fp.readUShort();
-				out[i].haircolor = fp.readUShort();
-			}
-			else {
-				out[i].CharNum = fp.readUChar();
-				out[i].haircolor = fp.readUChar();
-			}
+        if (blockSize >= 132) {
+            out[i].DeleteDate = fp.readLong();
+        }
 
-			if (blockSize === 116) {
-				fp.seek(0x04, SEEK_CUR); // unknown
-			}
+        if (blockSize >= 136) {
+            out[i].Robe = fp.readLong();
+        }
 
-			if (blockSize >= 124) {
-				out[i].bIsChangedCharName = fp.readShort();
-				out[i].lastMap = fp.readBinaryString(blockSize === 124 ? 12 : 16);
-			}
+        if (blockSize >= 140) {
+            out[i].SlotAddon = fp.readLong();
+        }
 
-			if (blockSize >= 132) {
-				out[i].DeleteDate = fp.readLong();
-			}
+        if (blockSize >= 144) {
+            out[i].RenameAddon = fp.readLong();
+        }
 
-			if (blockSize >= 136) {
-				out[i].Robe = fp.readLong();
-			}
+        if (blockSize >= 145) {
+            out[i].sex = fp.readUChar();
+        }
+    }
 
-			if (blockSize >= 140) {
-				out[i].SlotAddon = fp.readLong();
-			}
+    return out;
+}
 
-			if (blockSize >= 144) {
-				out[i].RenameAddon = fp.readLong();
-			}
+/**
+ * Add support for a new packet version
+ *
+ * @param {number} date
+ * @param {number[]} list of offsets
+ */
+function addSupport(date, list) {
+    let packet, param;
+    const count = list.length;
 
-			if (blockSize >= 145) {
-				out[i].sex = fp.readUChar();
-			}
-		}
+    for (let i = 0; i < count; ++i) {
+        param = list[i];
+        packet = param[0];
+        param[0] = date;
 
-		return out;
-	}
+        if (!packet?.prototype?.versions)
+            packet.prototype.versions = [];
 
+        packet.prototype.versions.push(list[i]);
+        packet.prototype.getPacketVersion = getPacketVersion;
+    }
+}
 
+const PacketVerManager = {
+    get value() {
+        return (_value > 0 ? _value : (window.ROConfig.servers[0].packetver || window.ROConfig.packetver));
+    },
 
-	/**
-	 * Add support for a new packet version
-	 *
-	 * @param {number} date
-	 * @param {number[]} list of offsets
-	 */
-	function addSupport(date, list) {
-		var packet, param;
-		var i, count = list.length;
+    set value(v) {
+        if (v !== _value) {
+            PacketLength.init(v);
+            console.log("%c[PACKETVER] Set packet version ", "color:#007000", _value = v);
+        }
+    },
 
-		for (i = 0; i < count; ++i) {
-			param    = list[i];
-			packet   = param[0];
-			param[0] = date;
+    addSupport,
+    parseCharInfo: parseCharList
+};
 
-			if (!packet?.prototype?.versions)
-				packet.prototype.versions = [];
-
-			packet.prototype.versions.push(list[i]);
-			packet.prototype.getPacketVersion = getPacketVersion;
-		}
-	}
-
-
-	/**
-	 * Export
-	 */
-	return {
-
-		// Get Back data
-		get value() {
-			return (_value > 0 ? _value : (ROConfig.servers[0].packetver || ROConfig.packetver));
-			//return _value;
-		},
-
-		set value(v) {
-			if (v !== _value) {
-				PacketLength.init(v);
-				console.log( "%c[PACKETVER] Set packet version ", "color:#007000", _value = v);
-			}
-		},
-
-		// Add support for packet version
-		addSupport:    addSupport,
-		parseCharInfo: parseCharList
-	};
-});
+export default PacketVerManager;
