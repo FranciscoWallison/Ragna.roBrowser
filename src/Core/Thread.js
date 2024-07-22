@@ -9,152 +9,133 @@
  * @author Vincent Thibault
  */
 
+import Configs from './Configs.js';
 
-define(['require', 'Core/Configs'], function( require, Configs )
-{
-	'use strict';
+'use strict';
 
+/**
+ * Memory to get back data
+ * @var List
+ */
+var _memory = {};
 
-	/**
-	 * Memory to get back data
-	 * @var List
-	 */
-	var _memory = {};
+/**
+ * List of hook callback
+ * @var List
+ */
+var _hook = {};
 
+/**
+ * @var {number} uid
+ */
+var _uid = 0;
 
-	/**
-	 * List of hook callback
-	 * @var List
-	 */
-	var _hook   = {};
+/**
+ * @var {mixed} origin for security
+ */
+var _origin = [];
 
+/**
+ * @var {window|Worker} context to send data to
+ */
+var _source = null;
 
-	/**
-	 * @var {number} uid
-	 */
-	var _uid = 0;
+/**
+ * Send data to thread
+ *
+ * @param {string} type
+ * @param {mixed} data
+ * @param {function} callback
+ */
+var Send = (function SendClosure() {
+    var _input = { type: '', data: null, uid: 0 };
 
+    return function Send(type, data, callback) {
+        var uid = 0;
 
-	/**
-	 * @var {mixed} origin for security
-	 */
-	var _origin = [];
+        if (callback) {
+            uid = ++_uid;
+            _memory[uid] = callback;
+        }
 
+        _input.type = type;
+        _input.data = data;
+        _input.uid = uid;
 
-	/**
-	 * @var {window|Worker} context to send data to
-	 */
-	var _source = null;
+        _source.postMessage(_input, _origin);
+    };
+})();
 
+/**
+ * Receive data from Thread
+ * Get back the data, find the caller and execute it
+ *
+ * @param {object} event
+ */
+function Receive(event) {
+    var uid = event.data.uid;
+    var type = event.data.type;
 
-	/**
-	 * Send data to thread
-	 *
-	 * @param {string} type
-	 * @param {mixed} data
-	 * @param {function} callback
-	 */
-	var Send = function SendClosure()
-	{
-		var _input = { type: '', data: null, uid: 0 };
+    // Direct callback
+    if (uid in _memory) {
+        _memory[uid].apply(null, event.data.arguments);
+        delete _memory[uid];
+    }
 
-		return function Send( type, data, callback )
-		{
-			var uid = 0;
+    // Hook Feature
+    if (type && _hook[type]) {
+        _hook[type].call(null, event.data.data);
+    }
+}
 
-			if (callback) {
-				uid          = ++_uid;
-				_memory[uid] = callback;
-			}
+/**
+ * Hook receive data
+ *
+ * @param {string} type
+ * @param {function} callback
+ */
+function Hook(type, callback) {
+    _hook[type] = callback;
+}
 
-			_input.type = type;
-			_input.data = data;
-			_input.uid  = uid;
+/**
+ * Modify where to send informations
+ *
+ * @param {Window} source
+ * @param {string} origin
+ */
+function Delegate(source, origin) {
+    _source = source;
+    _origin = origin;
+}
 
-			_source.postMessage( _input, _origin );
-		};
-	}();
+/**
+ * Initialize Thread
+ */
+function Init() {
+    if (!_source) {
+        var url = Configs.get('development') ? './ThreadEventHandler.js' : './../../ThreadEventHandler.js';
+        _source = new Worker(url + '?' + Configs.get('version', ''));
+    }
 
+    // Worker context
+    if (_source instanceof Worker) {
+        _source.addEventListener('message', Receive, false);
+    }
 
-	/**
-	 * Receive data from Thread
-	 * Get back the data, find the caller and execute it
-	 *
-	 * @param {object} event
-	 */
-	function Receive(event)
-	{
-		var uid  = event.data.uid;
-		var type = event.data.type;
+    // Other frame worker
+    else {
+        window.addEventListener('message', Receive, false);
+        _source.postMessage({ type: 'SYNC' }, _origin);
+    }
+}
 
-		// Direct callback
-		if (uid in _memory) {
-			_memory[uid].apply(null, event.data.arguments);
-			delete _memory[uid];
-		}
-
-		// Hook Feature
-		if (type && _hook[type]) {
-			_hook[type].call(null, event.data.data);
-		}
-	}
-
-
-	/**
-	 * Hook receive data
-	 *
-	 * @param {string} type
-	 * @param {function} callback
-	 */
-	function Hook( type, callback )
-	{
-		_hook[type] = callback;
-	}
-
-
-	/**
-	 * Modify where to send informations
-	 *
-	 * @param {Window} source
-	 * @param {string} origin
-	 */
-	function Delegate( source, origin )
-	{
-		_source = source;
-		_origin = origin;
-	}
-
-
-	/**
-	 * Initialize Thread
-	 */
-	function Init()
-	{
-		if (!_source) {
-			var url = Configs.get('development') ? './ThreadEventHandler.js' : './../../ThreadEventHandler.js';
-			_source = new Worker( require.toUrl(url) + '?' + Configs.get('version', '') );
-		}
-
-		// Worker context
-		if (_source instanceof Worker) {
-			_source.addEventListener('message', Receive, false);
-		}
-
-		// Other frame worker
-		else {
-			window.addEventListener('message', Receive, false );
-			_source.postMessage({type:'SYNC'}, _origin );
-		}
-	}
-
-
-	/**
-	 * Exports
-	 */
-	return {
-		send:     Send,
-		hook:     Hook,
-		init:     Init,
-		delegate: Delegate
-	};
-});
+/**
+ * Exports
+ */
+export default {
+    send: Send,
+    hook: Hook,
+    init: Init,
+    delegate: Delegate
+};

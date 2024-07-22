@@ -12,86 +12,72 @@
  * @author Vincent Thibault
  */
 
-define(function()
-{
-	'use strict';
+/**
+ * Mozilla TCP Socket
+ *
+ * @param {string} url
+ */
+function Socket(host, port) {
+	var self = this;
+	var TCPSocket = navigator.TCPSocket || navigator.mozTCPSocket;
 
+	this.socket = TCPSocket.open(host, port, { binaryType: "arraybuffer" });
+	this.connected = false;
 
-	/**
-	 * Mozilla TCP Socket
-	 *
-	 * @param {string} url
-	 */
-	function Socket( host, port )
-	{
-		var self       = this;
-		var TCPSocket  = navigator.TCPSocket || navigator.mozTCPSocket;
+	this.socket.onopen = function onOpen() {
+		self.connected = true;
+		self.onComplete(true);
+	};
 
-		this.socket    = TCPSocket.open(host, port, {binaryType:'arraybuffer'});
-		this.connected = false;
+	this.socket.onerror = function onError() {
+		if (!self.connected) {
+			self.onComplete(false);
+		}
+	};
 
-		this.socket.onopen = function onOpen() {
-			self.connected = true;
-			self.onComplete( true );
-		};
+	this.socket.ondata = function onMessage(event) {
+		self.onMessage(event.data);
+	};
 
-		this.socket.onerror = function onError() {
-			if (!self.connected) {
-				self.onComplete( false );
-			}
-		};
+	this.socket.onclose = function onClose() {
+		this.close();
+		self.connected = false;
 
-		this.socket.ondata = function onMessage(event) {
-			self.onMessage( event.data );
-		};
+		if (self.onClose) {
+			self.onClose();
+		}
+	};
+}
 
-		this.socket.onclose = function onClose() {
-			this.close();
-			self.connected = false;
+/**
+ * @return is the TCPSocket supported
+ */
+Socket.isSupported = function isSupported() {
+	return !!(navigator.TCPSocket || navigator.mozTCPSocket);
+};
 
-			if (self.onClose) {
-				self.onClose();
-			}
-		};
+/**
+ * Sending packet to applet
+ *
+ * @param {ArrayBuffer} buffer
+ */
+Socket.prototype.send = function Send(buffer) {
+	if (this.connected) {
+		this.socket.send(buffer);
 	}
+};
 
+/**
+ * Closing connection to server
+ */
+Socket.prototype.close = function Close() {
+	if (this.connected) {
+		this.socket.close();
+		this.connected = false;
+	}
+};
 
-	/**
-	 * @return is the TCPSocket supported
-	 */
-	Socket.isSupported = function isSupported()
-	{
-		return !!(navigator.TCPSocket || navigator.mozTCPSocket);
-	};
-
-
-	/**
-	 * Sending packet to applet
-	 *
-	 * @param {ArrayBuffer} buffer
-	 */
-	Socket.prototype.send = function Send( buffer )
-	{
-		if (this.connected) {
-			this.socket.send( buffer );
-		}
-	};
-
-
-	/**
-	 * Closing connection to server
-	 */
-	Socket.prototype.close = function Close()
-	{
-		if (this.connected) {
-			this.socket.close();
-			this.connected = false;
-		}
-	};
-
-
-	/**
-	 * Export
-	 */
-	return Socket;
-});
+/**
+ * Export
+ */
+export default Socket;

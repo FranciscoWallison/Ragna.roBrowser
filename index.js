@@ -1,6 +1,23 @@
+// Exemplo Completo com Importação Global
+// import $ from 'jquery';
+// window.jQuery = $;
+// window.$ = $;
+
+// // Seu código aqui...
+// $(document).ready(function(){
+//     console.log("jQuery is working!");
+// });
+
+
 import ROBrowser from './api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  const appContainer = document.getElementById('app-container');
+  const message = document.createElement('div');
+  message.innerText = 'Hello, roBrowser!';
+  message.style.color = 'white';
+  appContainer.appendChild(message);
+
   const browserOptions = {
     target: document.getElementById("robrowser"),
     remoteClient: "http://localhost:3338/",

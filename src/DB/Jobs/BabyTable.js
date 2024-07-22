@@ -8,12 +8,10 @@
  * @author Vincent Thibault
  */
 
-define(['./JobConst'], function( JobId )
-{
-	"use strict";
+import JobId from "./JobConst.js";
 
 
-	return [
+	export default [
 		JobId.NOVICE_B,
 		JobId.SUPERNOVICE_B,
 
@@ -109,4 +107,4 @@ define(['./JobConst'], function( JobId )
 		JobId.DO_SUMMONER_B1,
 
 	];
-});
+

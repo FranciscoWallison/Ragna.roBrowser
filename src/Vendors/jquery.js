@@ -8,6 +8,8 @@
  * @author Vincent Thibault
  */
 
+const jquery = require("jquery");
+
 define( ['jquery'], function( jQuery ){
 	return jQuery.noConflict( true );
 });
