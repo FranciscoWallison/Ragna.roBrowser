@@ -7,71 +7,65 @@
  * @author Vincent Thibault
  */
 
-define(function()
-{
-	"use strict";
+export default {
+	isTouchDevice: false,
+	isRenewal: false,
+	TouchTargeting: false,
+	AutoTargeting: false,
 
-	return {
-		
-		isTouchDevice: false,
-		isRenewal: false,
-		TouchTargeting: false,
-		AutoTargeting: false,
-		
-		FreezeUI:    false,
+	FreezeUI: false,
 
-		AuthCode:    0,
-		AID:         0,
-		GID:         0,
-		UserLevel:   0,
-		Sex:         0,
-		LangType:    0,
+	AuthCode: 0,
+	AID: 0,
+	GID: 0,
+	UserLevel: 0,
+	Sex: 0,
+	LangType: 0,
 
-		Character:   null,
-		Entity:      null,
+	Character: null,
+	Entity: null,
 
-		AdminList:   [],
+	AdminList: [],
 
-		underAutoCounter: false,
+	underAutoCounter: false,
 
-		moveAction:  null,
+	moveAction: null,
 
-		zeny:        0,
-		weight:      0,
+	zeny: 0,
+	weight: 0,
 
-		petId:       0,
-		pet:		{},
+	petId: 0,
+	pet: {},
 
-		hasParty:      false,
-		isPartyLeader: false,
+	hasParty: false,
+	isPartyLeader: false,
 
-		hasGuild:      false,
-		guildRight:    0,
-		isGuildMaster: false,
+	hasGuild: false,
+	guildRight: 0,
+	isGuildMaster: false,
 
-		Playing: false,
-		hasCart: false,
-		CartNum: 0,
-		
-		homCustomAI: false,
-		merCustomAI: false,
-		
-		autoFollow:       false,
-		autoFollowTarget: null,
+	Playing: false,
+	hasCart: false,
+	CartNum: 0,
 
-		mapState:  {
-			property        : 0,
-			type            : 0,
-			flag            : 0,
-			isPVPZone       : false,
-			isAgitZone      : false,
-			isPVP           : false,
-			isGVG           : false,
-			isSiege         : false,
-			isNoLockOn      : false,
-			showPVPCounter  : false,
-			showBFCounter   : false,
-			isBattleField   : false,
-		},
-	};
-});
+	homCustomAI: false,
+	merCustomAI: false,
+
+	autoFollow: false,
+	autoFollowTarget: null,
+
+	mapState: {
+		property: 0,
+		type: 0,
+		flag: 0,
+		isPVPZone: false,
+		isAgitZone: false,
+		isPVP: false,
+		isGVG: false,
+		isSiege: false,
+		isNoLockOn: false,
+		showPVPCounter: false,
+		showBFCounter: false,
+		isBattleField: false,
+	},
+};

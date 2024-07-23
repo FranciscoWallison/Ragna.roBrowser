@@ -7,38 +7,35 @@
  *
  * @author Vincent Thibault
  */
-define( ['Core/Preferences'], function( Preferences )
-{
-	'use strict';
 
+import Preferences from "../Core/Preferences.js";
 
-	/**
-	 * Export
-	 */
-	return Preferences.get( 'Graphics', {
-
+/**
+ * Export
+ */
+export default Preferences.get(
+	"Graphics",
+	{
 		/**
 		 * Game size
 		 */
-		screensize:  '800x600',
+		screensize: "800x600",
 
 		/*
 		 * Game quality detail
 		 * 100: Full
 		 */
-		quality:     100,
-
+		quality: 100,
 
 		/**
 		 * Do we show official game cursor ?
 		 */
-		cursor:      true,
-
+		cursor: true,
 
 		/**
 		 * Game FPS Limit
 		 */
-		fpslimit:    60
-	}, 1.1 );
-
-});
+		fpslimit: 60,
+	},
+	1.1
+);

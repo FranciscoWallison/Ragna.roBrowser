@@ -22,8 +22,8 @@ define(function(require)
 	var SpriteRenderer     = require('Renderer/SpriteRenderer');
 	var UIManager          = require('UI/UIManager');
 	var UIComponent        = require('UI/UIComponent');
-	var htmlText           = require('text!./CharCreatev3.html');
-	var cssText            = require('text!./CharCreatev3.css');
+	var htmlText           = require('raw-loader!./CharCreatev3.html');
+	var cssText            = require('raw-loader!./CharCreatev3.css');
 	var Client             = require('Core/Client');
 
 

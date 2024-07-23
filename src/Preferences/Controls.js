@@ -7,19 +7,18 @@
  *
  * @author Vincent Thibault
  */
-define( ['Core/Preferences'], function( Preferences )
-{
-	'use strict';
+import Preferences from "../Core/Preferences.js";
 
-
-	/**
-	 * Export
-	 */
-	return Preferences.get( 'Controls', {
-		noctrl:  true,
+/**
+ * Export
+ */
+export default Preferences.get(
+	"Controls",
+	{
+		noctrl: true,
 		noshift: false,
-        	snap: false,
-        	itemsnap: false
-	}, 1.0 );
-
-});
+		snap: false,
+		itemsnap: false,
+	},
+	1.0
+);
